@@ -1,0 +1,1206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>PTI - Vision | MCS Robotics</title>
+
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* Basfärg: mörkgrå (som i bilden) */
+    :root {
+      --bg-dark: #262626;
+      --bg-darker: #1f1f1f;
+      --bg-blackish: #181818;
+      --gray-border: #3a3a3a;
+      --gray-soft: #9ca3af;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg-dark);
+      color: #f5f5ff;
+    }
+
+    .page {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 16px 24px 32px;
+    }
+
+    /* ---------------- Header ---------------- */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--gray-border);
+      margin-bottom: 16px;
+    }
+
+    .brand-wrapper {
+      display:flex;
+      align-items:center;
+      gap:16px;
+    }
+
+    /* Logga 3x+ större */
+    header img.logo {
+      height: 140px;
+      width: auto;
+      display:block;
+    }
+
+    .powered-text {
+      font-size: 10px;      /* hälften mot “normal” rubrik */
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--gray-soft);
+    }
+
+    .badge-learning {
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      border: 1px solid transparent;
+    }
+    .badge-learning-off {
+      background: var(--bg-darker);
+      color: #e5e7eb;
+      border-color: var(--gray-border);
+    }
+    .badge-learning-on {
+      background: rgba(239,68,68,0.12);
+      color: #fecaca;
+      border-color: #f97373;
+      box-shadow: 0 0 12px rgba(248,113,113,0.5);
+    }
+
+    /* ---------------- Layout & cards ---------------- */
+    .layout {
+      display: grid;
+      grid-template-columns: 2fr 1.6fr;
+      gap: 16px;
+    }
+    .card {
+      background: var(--bg-dark);
+      border-radius: 16px;
+      padding: 16px 18px;
+      border: 1px solid var(--gray-border);
+    }
+
+    video, canvas {
+      width: 100%;
+      display: block;
+      background: var(--bg-blackish);
+    }
+
+    /* ---------------- Inputs & buttons ---------------- */
+    .class-editor select,
+    .class-editor input {
+      padding: 4px 10px;
+      background: var(--bg-blackish);
+      color: #e5e7eb;
+      border-radius: 999px;
+      border: 1px solid var(--gray-border);
+      font-size: 12px;
+    }
+
+    button {
+      border-radius: 999px;
+      border: none;
+      padding: 6px 14px;
+      font-size: 13px;
+      cursor: pointer;
+      background: #4b4b4b;           /* neutral grå */
+      color: #f9fafb;
+    }
+    button.secondary {
+      background: var(--bg-blackish);
+      color: #e5e7eb;
+      border: 1px solid var(--gray-border);
+    }
+    button:hover:not(:disabled) {
+      filter: brightness(1.08);
+    }
+    button:disabled {
+      opacity: 0.5;
+      cursor: default;
+    }
+
+    table { width: 100%; font-size: 12px; margin-top: 8px; border-collapse: collapse; }
+    th, td { padding: 4px 6px; text-align: left; }
+    thead { background: var(--bg-blackish); }
+    tbody tr:nth-child(odd) { background: rgba(0,0,0,0.20); }
+    tbody tr:nth-child(even) { background: rgba(0,0,0,0.30); }
+    tbody tr:hover { background: rgba(148,163,184,0.25); cursor: pointer; }
+
+    .status-text {
+      margin-left: auto;
+      color: var(--gray-soft);
+      font-size:12px;
+    }
+
+    /* --- Container summary --- */
+    .summary-title-main {
+      font-size: 20px;
+      font-weight: 600;
+      color: #e5e7eb;
+      margin-bottom: 2px;
+    }
+    .summary-title-sub {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--gray-soft);
+      margin-bottom: 6px;
+    }
+    .badges-row {
+      display:flex;
+      flex-wrap:wrap;
+      gap:6px;
+      margin-top:4px;
+      margin-bottom:6px;
+    }
+    .badge {
+      padding:3px 8px;
+      border-radius:999px;
+      font-size:11px;
+      border:1px solid transparent;
+    }
+    .badge-status-ok {
+      background: rgba(34,197,94,0.15);
+      border-color: rgba(34,197,94,0.6);
+      color:#bbf7d0;
+    }
+    .badge-status-alert {
+      background: rgba(248,113,113,0.18);
+      border-color: rgba(248,113,113,0.8);
+      color:#fecaca;
+    }
+    .badge-stage {
+      background: var(--bg-blackish);
+      border-color: var(--gray-border);
+      color:#e5e7eb;
+    }
+    .badge-muted {
+      background: var(--bg-darker);
+      border-color: var(--gray-border);
+      color:#e5e7eb;
+    }
+
+    .stage-controls {
+      margin-top:8px;
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+      align-items:center;
+      font-size:12px;
+      color:var(--gray-soft);
+    }
+    .stage-label {
+      font-size:12px;
+      color:#e5e7eb;
+    }
+    .btn-pill-active {
+      background:#555555;           /* grå highlight */
+      color:#f9fafb;
+    }
+
+    /* --- PreWash/Resolved --- */
+    .wash-container {
+      margin-top:12px;
+      font-size:12px;
+    }
+    .wash-boxes {
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+      margin-top:6px;
+    }
+    .wash-box {
+      flex:1 1 160px;
+      min-width:160px;
+      background: var(--bg-blackish);
+      border-radius:10px;
+      border:1px solid var(--gray-border);
+      padding:8px 10px;
+    }
+    .wash-box h4 {
+      font-size:12px;
+      margin-bottom:4px;
+      color:#e5e7eb;
+    }
+    .wash-box ul {
+      margin-top:2px;
+      padding-left:16px;
+      max-height:140px;
+      overflow:auto;
+    }
+    .wash-box li {
+      margin-bottom:2px;
+    }
+
+    .wash-item {
+      display:flex;
+      align-items:center;
+      gap:6px;
+      margin-bottom:3px;
+    }
+    .severity-dot {
+      width:8px;
+      height:8px;
+      border-radius:999px;
+      flex-shrink:0;
+    }
+    .severity-high   { background:#ef4444; }
+    .severity-medium { background:#eab308; }
+    .severity-low    { background:#6b7280; }
+
+    .wash-category-label {
+      font-size:11px;
+      font-weight:600;
+      margin-top:4px;
+      margin-bottom:2px;
+      color:var(--gray-soft);
+    }
+    .wash-item-text-main {
+      font-size:11px;
+    }
+    .wash-item-text-sub {
+      font-size:10px;
+      color:var(--gray-soft);
+    }
+
+    .legend-row {
+      margin-top:6px;
+      font-size:10px;
+      color:var(--gray-soft);
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      align-items:center;
+    }
+    .legend-item {
+      display:flex;
+      align-items:center;
+      gap:4px;
+    }
+    .legend-color-box {
+      width:10px;
+      height:10px;
+      border-radius:3px;
+    }
+
+    /* --- Contamination scale (rutorna i samma färg som bakgrunden) --- */
+    .cont-scale-wrapper {
+      margin-top:10px;
+      padding:10px 12px;
+      border-radius:10px;
+      background: var(--bg-blackish);
+      border:1px solid var(--gray-border);
+    }
+    .cont-scale-header {
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      margin-bottom:6px;
+      font-size:11px;
+      color:#e5e7eb;
+    }
+    .cont-scale-bar {
+      display:flex;
+      gap:6px;
+      align-items:center;
+    }
+    .cont-box {
+      width:26px;
+      height:16px;
+      border-radius:4px;
+      background: var(--bg-dark);      /* samma färg som bakgrunden */
+      border:1px solid var(--gray-border);
+      transition:background 0.2s, transform 0.2s, border-color 0.2s;
+    }
+    .cont-box.active {
+      background:#f5f5f5;             /* ljus när aktiv */
+      border-color:#f5f5f5;
+      transform:translateY(-1px);
+    }
+    .cont-scale-label {
+      font-size:10px;
+      color:var(--gray-soft);
+      margin-top:4px;
+      text-align:right;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="page">
+
+    <!-- Header ------------------------------------------------------------ -->
+    <header>
+      <div class="brand-wrapper">
+        <img src="/static/pti-logo.png" class="logo" alt="PTI – Pre Trip Inspection" />
+        <div class="powered-text">Powered by MCS Robotics</div>
+      </div>
+
+      <span id="learningBadge" class="badge-learning badge-learning-off">
+        LEARNING MODE OFF
+      </span>
+    </header>
+
+    <!-- Layout ------------------------------------------------------------ -->
+    <div class="layout">
+
+      <!-- Left: video, controls, class selection -->
+      <section class="card">
+        <h2 style="color:#e5e7eb;margin-bottom:10px;font-size:16px;">VIDEO & ANALYSIS</h2>
+
+        <div style="position:relative;">
+          <video id="video" controls muted></video>
+          <canvas id="overlay" style="position:absolute;inset:0;"></canvas>
+        </div>
+
+        <!-- File & buttons -->
+        <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+          <input type="file" id="fileInput" accept="video/*" />
+
+          <button id="btnPlay">Play</button>
+          <button id="btnPause">Pause</button>
+          <button id="btnAnalyze" disabled>Analyze paused frame</button>
+          <button id="btnAuto" class="secondary">Auto: off</button>
+          <button id="btnLearn" class="secondary">Learning: off</button>
+          <button id="btnTrain" class="secondary">Train YOLO now</button>
+
+          <span class="status-text">
+            Backend:
+            <span id="backendStatus">not tested</span>
+          </span>
+        </div>
+
+        <!-- Stage selection -->
+        <div class="stage-controls">
+          <span>Inspection stage:</span>
+          <button id="btnStageNone" class="secondary">None</button>
+          <button id="btnStagePre" class="secondary">Pre wash</button>
+          <button id="btnStagePost" class="secondary">Post wash</button>
+          <span id="stageLabel" class="stage-label">Stage: none</span>
+        </div>
+
+        <!-- Class dropdown + custom label -->
+        <div class="class-editor" style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+          <span style="font-size:12px;color:var(--gray-soft);">Label for new/selected box:</span>
+          <select id="labelSelect">
+            <option value="">– select class –</option>
+
+            <!-- Damage via YOLO -->
+            <option value="DamageDent">DamageDent – dent</option>
+            <option value="DamageScratch">DamageScratch – scratch</option>
+            <option value="DamageHole">DamageHole – hole</option>
+
+            <!-- Dirt / loose objects / discoloration -->
+            <option value="Dirt">Dirt – dirt</option>
+            <option value="LooseObject">LooseObject – loose object</option>
+            <option value="Discoloration">Discoloration – discoloration</option>
+
+            <!-- Other analysis labels -->
+            <option value="Person">Person</option>
+            <option value="Person in danger zone">Person in danger zone</option>
+            <option value="Vehicle">Vehicle</option>
+            <option value="Blocked door">Blocked door</option>
+
+            <!-- Custom label -->
+            <option value="__custom__">Custom label…</option>
+          </select>
+
+          <input type="text" id="customLabel" placeholder="Custom label (if selected)" />
+          <button id="btnApplyLabel" class="secondary">Update selected box</button>
+        </div>
+
+        <p style="margin-top:8px;font-size:11px;color:var(--gray-soft);">
+          Draw boxes directly on the image to create new objects. In <strong>Learning mode ON</strong>,
+          these objects are saved as training data (YOLO + visual memory).
+        </p>
+      </section>
+
+      <!-- Right: status, contamination, pre/post results, table -->
+      <section class="card">
+        <h2 style="color:#e5e7eb;margin-bottom:10px;font-size:16px;">OBJECTS & STATUS</h2>
+
+        <!-- Container summary -->
+        <div id="containerSummary" style="margin-bottom:10px;">
+          <div id="summaryContainerId" class="summary-title-main">Container ID: –</div>
+          <div id="summaryContainerType" class="summary-title-sub">Type: –</div>
+
+          <div class="badges-row">
+            <span id="summaryStatusBadge" class="badge badge-muted">Status: unknown</span>
+            <span id="summaryStageBadge" class="badge badge-stage">Stage: –</span>
+            <span id="summaryPeopleBadge" class="badge badge-muted">Person nearby: –</span>
+            <span id="summaryDoorBadge" class="badge badge-muted">Doors: –</span>
+            <span id="summaryAnomBadge" class="badge badge-muted">Anomalies: –</span>
+          </div>
+        </div>
+
+        <!-- Contamination scale -->
+        <div class="cont-scale-wrapper">
+          <div class="cont-scale-header">
+            <span>Contamination level</span>
+            <span id="contScaleValueText">– / 9</span>
+          </div>
+          <div class="cont-scale-bar" id="contScaleBar">
+            <div class="cont-box" data-level="1"></div>
+            <div class="cont-box" data-level="2"></div>
+            <div class="cont-box" data-level="3"></div>
+            <div class="cont-box" data-level="4"></div>
+            <div class="cont-box" data-level="5"></div>
+            <div class="cont-box" data-level="6"></div>
+            <div class="cont-box" data-level="7"></div>
+            <div class="cont-box" data-level="8"></div>
+            <div class="cont-box" data-level="9"></div>
+          </div>
+          <div class="cont-scale-label">
+            Uses all findings to estimate cleaning intensity (water, chemicals, time).
+          </div>
+        </div>
+
+        <!-- PreWash / Resolved -->
+        <div id="washResults" class="wash-container">
+          <h3 style="font-size:13px;color:var(--gray-soft);">PreWash & Resolved</h3>
+          <div style="font-size:11px;color:var(--gray-soft);margin-top:2px;">
+            Mark one frame as <strong>Pre wash</strong> and another as <strong>Post wash</strong>
+            for the same container. The system shows PreWash Remarks and which of them are Resolved.
+          </div>
+
+          <div class="legend-row">
+            <div class="legend-item">
+              <div class="legend-color-box" style="background:#ef4444;"></div>
+              <span>Damage (high severity)</span>
+            </div>
+            <div class="legend-item">
+              <div class="legend-color-box" style="background:#eab308;"></div>
+              <span>Dirt / loose object / discoloration (medium)</span>
+            </div>
+            <div class="legend-item">
+              <div class="legend-color-box" style="background:#6b7280;"></div>
+              <span>Other (low)</span>
+            </div>
+          </div>
+
+          <div class="wash-boxes">
+            <div class="wash-box">
+              <h4>PreWash Remarks</h4>
+              <div style="font-size:11px;color:var(--gray-soft);" id="prewashInfo">No PreWash inspection yet.</div>
+              <ul id="prewashList"></ul>
+            </div>
+
+            <div class="wash-box">
+              <h4>Resolved</h4>
+              <div style="font-size:11px;color:var(--gray-soft);" id="resolvedInfo">Nothing resolved yet.</div>
+              <ul id="resolvedList"></ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- Table with detections -->
+        <table style="margin-top:12px;">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Display name</th>
+              <th>Label</th>
+              <th>Category</th>
+              <th>Conf.</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="detectionsBody"></tbody>
+        </table>
+
+        <p style="margin-top:8px;font-size:11px;color:var(--gray-soft);">
+          Number (#) matches the box in the video. Click a row to highlight the box.
+          ✕ trains the object as <code>__IGNORE__</code> (if learning mode is on).
+        </p>
+      </section>
+
+    </div>
+  </div>
+
+  <!-- JS -------------------------------------------------------------- -->
+  <script>
+  /* ===============================================================
+     PTI – Vision Frontend
+     =============================================================== */
+
+  window.addEventListener('DOMContentLoaded', () => {
+
+    // --- DOM refs ---
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('overlay');
+    const ctx = canvas.getContext('2d');
+
+    const fileInput = document.getElementById('fileInput');
+    const btnPlay = document.getElementById('btnPlay');
+    const btnPause = document.getElementById('btnPause');
+    const btnAnalyze = document.getElementById('btnAnalyze');
+    const btnAuto = document.getElementById('btnAuto');
+    const btnLearn = document.getElementById('btnLearn');
+    const btnTrain = document.getElementById('btnTrain');
+    const learningBadge = document.getElementById('learningBadge');
+    const backendStatus = document.getElementById('backendStatus');
+
+    const labelSelect = document.getElementById('labelSelect');
+    const customLabel = document.getElementById('customLabel');
+    const btnApplyLabel = document.getElementById('btnApplyLabel');
+
+    const detectionsBody = document.getElementById('detectionsBody');
+
+    // Stage-controls
+    const btnStageNone = document.getElementById('btnStageNone');
+    const btnStagePre = document.getElementById('btnStagePre');
+    const btnStagePost = document.getElementById('btnStagePost');
+    const stageLabel = document.getElementById('stageLabel');
+
+    // Summary DOM
+    const summaryContainerId = document.getElementById('summaryContainerId');
+    const summaryContainerType = document.getElementById('summaryContainerType');
+    const summaryStatusBadge = document.getElementById('summaryStatusBadge');
+    const summaryStageBadge = document.getElementById('summaryStageBadge');
+    const summaryPeopleBadge = document.getElementById('summaryPeopleBadge');
+    const summaryDoorBadge = document.getElementById('summaryDoorBadge');
+    const summaryAnomBadge = document.getElementById('summaryAnomBadge');
+
+    // PreWash / Resolved DOM
+    const prewashInfo = document.getElementById('prewashInfo');
+    const prewashList = document.getElementById('prewashList');
+    const resolvedInfo = document.getElementById('resolvedInfo');
+    const resolvedList = document.getElementById('resolvedList');
+
+    // Contamination scale DOM
+    const contScaleBar = document.getElementById('contScaleBar');
+    const contScaleValueText = document.getElementById('contScaleValueText');
+
+    // --- State ---
+    let lastDetections = [];
+    let autoAnalyze = false;
+    let autoTimer = null;
+    let analyzing = false;
+    let selectedIndex = -1;
+    let learningMode = false;
+    let currentStage = null; // "pre" | "post" | null
+
+    // --- Learning mode ---
+    function setLearningMode(on) {
+      learningMode = on;
+
+      if (on) {
+        btnLearn.textContent = "Learning: on";
+        btnLearn.classList.remove("secondary");
+        learningBadge.textContent = "LEARNING MODE ON";
+        learningBadge.classList.add("badge-learning-on");
+        learningBadge.classList.remove("badge-learning-off");
+      } else {
+        btnLearn.textContent = "Learning: off";
+        btnLearn.classList.add("secondary");
+        learningBadge.textContent = "LEARNING MODE OFF";
+        learningBadge.classList.remove("badge-learning-on");
+        learningBadge.classList.add("badge-learning-off");
+      }
+    }
+
+    function updateBackendStatus(text, ok = false) {
+      backendStatus.textContent = text;
+      backendStatus.style.color = ok ? "#22c55e" : "#ef4444";
+    }
+
+    function colorForCategory(cat, label) {
+      const c = (cat || "").toLowerCase();
+      const l = (label || "").toLowerCase();
+
+      if (c === "damage" || l.startsWith("damage")) return "#ef4444";
+      if (
+        l.includes("dirt") ||
+        l.includes("smuts") ||
+        l.includes("looseobject") ||
+        l.includes("loose object") ||
+        l.includes("löst föremål") ||
+        l.includes("discoloration") ||
+        l.includes("missfärgning")
+      ) {
+        return "#eab308";
+      }
+      if (c === "lock") return "#22c55e";
+      if (c === "door" || c === "door_open" || c === "door_closed") return "#e5e7eb";
+      if (c === "human") return "#f9fafb";
+      return "#d1d5db"; // ljusgrå för övriga
+    }
+
+    // --- Stage helper ---
+    function setStage(stage) {
+      currentStage = stage; // null | "pre" | "post"
+
+      btnStageNone.classList.remove("btn-pill-active");
+      btnStagePre.classList.remove("btn-pill-active");
+      btnStagePost.classList.remove("btn-pill-active");
+
+      if (stage === "pre") {
+        btnStagePre.classList.add("btn-pill-active");
+        stageLabel.textContent = "Stage: Pre wash";
+      } else if (stage === "post") {
+        btnStagePost.classList.add("btn-pill-active");
+        stageLabel.textContent = "Stage: Post wash";
+      } else {
+        btnStageNone.classList.add("btn-pill-active");
+        stageLabel.textContent = "Stage: none";
+      }
+    }
+
+    // --- Contamination scale update ---
+    function updateContaminationScale(level) {
+      const n = Math.min(9, Math.max(1, level || 1));
+      const boxes = contScaleBar.querySelectorAll(".cont-box");
+      boxes.forEach((box) => {
+        const lv = parseInt(box.getAttribute("data-level"), 10);
+        if (lv <= n) {
+          box.classList.add("active");
+        } else {
+          box.classList.remove("active");
+        }
+      });
+      contScaleValueText.textContent = n + " / 9";
+    }
+
+    // --- Summary / PreWash/Resolved UI update ---
+    function updateSummaryFromResponse(data) {
+      summaryContainerId.textContent = "Container ID: " + (data.container_id || "UNKNOWN");
+      summaryContainerType.textContent = "Type: " + (data.container_type || "Unknown type");
+
+      summaryStatusBadge.className = "badge";
+      if (data.status === "alert") {
+        summaryStatusBadge.classList.add("badge-status-alert");
+        summaryStatusBadge.textContent = "Status: ALERT";
+      } else {
+        summaryStatusBadge.classList.add("badge-status-ok");
+        summaryStatusBadge.textContent = "Status: OK";
+      }
+
+      let stageText = "–";
+      if (data.inspection_stage === "pre") stageText = "Pre wash";
+      if (data.inspection_stage === "post") stageText = "Post wash";
+      summaryStageBadge.textContent = "Stage: " + stageText;
+
+      summaryPeopleBadge.className = "badge badge-muted";
+      summaryPeopleBadge.textContent = data.people_nearby
+        ? "Person nearby: Yes"
+        : "Person nearby: No";
+
+      summaryDoorBadge.className = "badge badge-muted";
+      if (data.door_status === "open") {
+        summaryDoorBadge.textContent = "Doors: Open";
+      } else if (data.door_status === "closed") {
+        summaryDoorBadge.textContent = "Doors: Closed";
+      } else {
+        summaryDoorBadge.textContent = "Doors: Unknown";
+      }
+
+      summaryAnomBadge.className = "badge badge-muted";
+      summaryAnomBadge.textContent = data.anomalies_present
+        ? "Anomalies: Yes"
+        : "Anomalies: No";
+
+      updateContaminationScale(data.contamination_level || 1);
+
+      updatePrewashResolved(data.prewash_remarks || [], data.resolved_remarks || []);
+    }
+
+    // --- Diff helpers reused for PreWash/Resolved ---
+    function classifyDiffItem(item) {
+      const cat = (item.category || "").toLowerCase();
+      const label = (item.label || "").toLowerCase();
+
+      let group = "other";
+      let severity = "low";
+
+      if (cat === "damage" || label.startsWith("damage")) {
+        group = "damage";
+        severity = "high";
+      } else if (
+        label.includes("dirt") ||
+        label.includes("smuts") ||
+        label.includes("loose object") ||
+        label.includes("looseobject") ||
+        label.includes("löst föremål") ||
+        label.includes("discoloration") ||
+        label.includes("missfärgning")
+      ) {
+        group = "dirt";
+        severity = "medium";
+      }
+
+      return { group, severity };
+    }
+
+    function severityLabel(sev) {
+      if (sev === "high") return "High (damage)";
+      if (sev === "medium") return "Medium (dirt/object)";
+      return "Low";
+    }
+
+    function updatePrewashResolved(prewashItems, resolvedItems) {
+      prewashList.innerHTML = "";
+      resolvedList.innerHTML = "";
+
+      function buildList(listEl, infoEl, items, emptyText) {
+        listEl.innerHTML = "";
+        if (!items || items.length === 0) {
+          infoEl.textContent = emptyText;
+          return;
+        }
+        infoEl.textContent = "";
+
+        const damageItems = [];
+        const dirtItems = [];
+        const otherItems = [];
+
+        items.forEach((item) => {
+          const { group, severity } = classifyDiffItem(item);
+          const bucket =
+            group === "damage" ? damageItems :
+            group === "dirt"   ? dirtItems   :
+            otherItems;
+          bucket.push({ item, severity });
+        });
+
+        function renderGroup(label, bucket) {
+          if (!bucket.length) return;
+          const header = document.createElement("div");
+          header.className = "wash-category-label";
+          header.textContent = label;
+          listEl.appendChild(header);
+
+          bucket.forEach(({ item, severity }) => {
+            const li = document.createElement("li");
+            const row = document.createElement("div");
+            row.className = "wash-item";
+
+            const dot = document.createElement("div");
+            dot.className = "severity-dot " +
+              (severity === "high" ? "severity-high"
+              : severity === "medium" ? "severity-medium"
+              : "severity-low");
+
+            const textBox = document.createElement("div");
+            const main = document.createElement("div");
+            main.className = "wash-item-text-main";
+            main.textContent = item.label || "Unknown";
+
+            const sub = document.createElement("div");
+            sub.className = "wash-item-text-sub";
+            const catText = item.category ? "Category: " + item.category : "";
+            const sevText = "Severity: " + severityLabel(severity);
+            sub.textContent = catText ? (catText + " | " + sevText) : sevText;
+
+            textBox.appendChild(main);
+            textBox.appendChild(sub);
+
+            row.appendChild(dot);
+            row.appendChild(textBox);
+            li.appendChild(row);
+            listEl.appendChild(li);
+          });
+        }
+
+        renderGroup("Damage", damageItems);
+        renderGroup("Dirt / loose objects / discoloration", dirtItems);
+        renderGroup("Other", otherItems);
+      }
+
+      buildList(prewashList, prewashInfo, prewashItems, "No PreWash inspection yet.");
+      buildList(resolvedList, resolvedInfo, resolvedItems, "Nothing resolved yet.");
+    }
+
+    // --- Draw detections ---
+    function drawDetections(detList) {
+      if (!video.videoWidth) return;
+
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.lineWidth = 2;
+
+      detList.forEach((det, idx) => {
+        if (!det.bbox) return;
+        const box = det.bbox;
+        const color = colorForCategory(det.category, det.label);
+
+        ctx.strokeStyle = color;
+        ctx.strokeRect(box.x, box.y, box.w, box.h);
+
+        const text = "#" + (idx + 1) + " " + (det.legend || det.label || "");
+        ctx.font = "12px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+        const tw = ctx.measureText(text).width + 6;
+        const th = 16;
+
+        let tx = box.x;
+        let ty = box.y - th - 2;
+        if (ty < 0) ty = box.y + box.h + 2;
+        if (tx + tw > canvas.width) tx = canvas.width - tw - 2;
+
+        ctx.fillStyle = "rgba(0,0,0,0.75)";
+        ctx.fillRect(tx, ty, tw, th);
+        ctx.fillStyle = "#f9fafb";
+        ctx.fillText(text, tx + 3, ty + th - 4);
+      });
+    }
+
+    // --- Table ---
+    function updateTable(detList) {
+      detectionsBody.innerHTML = "";
+
+      detList.forEach((det, idx) => {
+        const tr = document.createElement("tr");
+
+        const confText = det.confidence != null
+          ? (det.confidence * 100).toFixed(1) + "%"
+          : "-";
+
+        tr.innerHTML = `
+          <td>${idx + 1}</td>
+          <td>${det.legend || det.label || ""}</td>
+          <td>${det.label || ""}</td>
+          <td>${det.category || ""}</td>
+          <td>${confText}</td>
+          <td><button data-del="${idx}" style="color:#f87171;background:none;border:none;cursor:pointer;">✕</button></td>
+        `;
+
+        tr.addEventListener("click", () => {
+          selectedIndex = idx;
+          drawDetections(detList);
+        });
+
+        const btnDel = tr.querySelector("button[data-del]");
+        btnDel.addEventListener("click", (ev) => {
+          ev.stopPropagation();
+          ignoreDetection(idx);
+        });
+
+        detectionsBody.appendChild(tr);
+      });
+    }
+
+    // --- Label from dropdown / custom ---
+    function getSelectedLabel() {
+      const val = labelSelect.value;
+      if (!val) return null;
+      if (val === "__custom__") {
+        const t = customLabel.value.trim();
+        return t || null;
+      }
+      return val;
+    }
+
+    // --- Training backend calls for single boxes ---
+    function trainRect(det, label) {
+      if (!learningMode) return;
+      if (!det.bbox || !video.videoWidth) return;
+
+      const box = det.bbox;
+
+      // 1) visual memory (patch)
+      const patchCanvas = document.createElement("canvas");
+      patchCanvas.width = box.w;
+      patchCanvas.height = box.h;
+      const pctx = patchCanvas.getContext("2d");
+      pctx.drawImage(video, box.x, box.y, box.w, box.h, 0, 0, box.w, box.h);
+
+      patchCanvas.toBlob((blob) => {
+        if (!blob) return;
+        const fd = new FormData();
+        fd.append("label", label);
+        fd.append("image", blob, "patch.jpg");
+        fetch("http://localhost:8000/api/train_visual", {
+          method: "POST",
+          body: fd
+        }).catch(console.error);
+      }, "image/jpeg", 0.9);
+
+      // 2) YOLO training sample (full frame + bbox)
+      const fullCanvas = document.createElement("canvas");
+      fullCanvas.width = video.videoWidth;
+      fullCanvas.height = video.videoHeight;
+      fullCanvas.getContext("2d").drawImage(video, 0, 0);
+
+      fullCanvas.toBlob((blob) => {
+        if (!blob) return;
+        const fd = new FormData();
+        fd.append("label", label);
+        fd.append("x", String(Math.round(box.x)));
+        fd.append("y", String(Math.round(box.y)));
+        fd.append("w", String(Math.round(box.w)));
+        fd.append("h", String(Math.round(box.h)));
+        fd.append("image", blob, "frame.jpg");
+
+        fetch("http://localhost:8000/api/log_yolo_sample", {
+          method: "POST",
+          body: fd
+        }).catch(console.error);
+      }, "image/jpeg", 0.9);
+    }
+
+    function ignoreDetection(idx) {
+      const det = lastDetections[idx];
+      if (!det) return;
+
+      trainRect(det, "__IGNORE__");
+
+      lastDetections.splice(idx, 1);
+      updateTable(lastDetections);
+      drawDetections(lastDetections);
+    }
+
+    function updateDetectionLabel(idx, newLabel) {
+      const det = lastDetections[idx];
+      if (!det) return;
+      det.label = newLabel;
+      det.legend = newLabel;
+      trainRect(det, newLabel);
+      updateTable(lastDetections);
+      drawDetections(lastDetections);
+    }
+
+    // --- Analyze current frame ---
+    async function analyzeFrame() {
+      if (analyzing) return;
+      if (!video.videoWidth) return;
+      analyzing = true;
+
+      try {
+        const tmp = document.createElement("canvas");
+        tmp.width = video.videoWidth;
+        tmp.height = video.videoHeight;
+        tmp.getContext("2d").drawImage(video, 0, 0);
+
+        const blob = await new Promise((resolve) =>
+          tmp.toBlob(resolve, "image/jpeg", 0.9)
+        );
+
+        const fd = new FormData();
+        fd.append("image", blob, "frame.jpg");
+        if (currentStage === "pre" || currentStage === "post") {
+          fd.append("inspection_stage", currentStage);
+        }
+
+        updateBackendStatus("analyzing...", true);
+
+        const res = await fetch("http://localhost:8000/api/analyze", {
+          method: "POST",
+          body: fd
+        });
+
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        const data = await res.json();
+
+        lastDetections = data.detections || [];
+        updateTable(lastDetections);
+        drawDetections(lastDetections);
+        updateSummaryFromResponse(data);
+        updateBackendStatus("ok", true);
+      } catch (err) {
+        console.error(err);
+        updateBackendStatus("error", false);
+      } finally {
+        analyzing = false;
+      }
+    }
+
+    // --- Auto-mode ---
+    function setAuto(on) {
+      autoAnalyze = on;
+      btnAuto.textContent = on ? "Auto: on" : "Auto: off";
+
+      if (autoTimer) {
+        clearInterval(autoTimer);
+        autoTimer = null;
+      }
+
+      if (on) {
+        autoTimer = setInterval(() => {
+          if (!video.paused && !video.ended) {
+            if (!analyzing) {
+              analyzeFrame();
+            }
+          }
+        }, 200);
+      }
+    }
+
+    // --- Train YOLO button ---
+    btnTrain.addEventListener("click", async () => {
+      try {
+        btnTrain.disabled = true;
+        btnTrain.textContent = "Training…";
+        updateBackendStatus("starting training...", true);
+
+        const res = await fetch("http://localhost:8000/api/train_yolo_now", {
+          method: "POST"
+        });
+
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        const data = await res.json();
+        if (data.ok) {
+          updateBackendStatus("training started", true);
+        } else {
+          updateBackendStatus("training failed", false);
+        }
+      } catch (err) {
+        console.error(err);
+        updateBackendStatus("training error", false);
+      } finally {
+        setTimeout(() => {
+          btnTrain.disabled = false;
+          btnTrain.textContent = "Train YOLO now";
+        }, 2000);
+      }
+    });
+
+    // --- Draw custom boxes with mouse ---
+    let drawing = false;
+    let startX = 0;
+    let startY = 0;
+    let currentRect = null;
+
+    function toImageCoords(event) {
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width  / rect.width;
+      const scaleY = canvas.height / rect.height;
+      return {
+        x: (event.clientX - rect.left) * scaleX,
+        y: (event.clientY - rect.top)  * scaleY
+      };
+    }
+
+    canvas.addEventListener("mousedown", (e) => {
+      if (!video.videoWidth) return;
+      drawing = true;
+      const p = toImageCoords(e);
+      startX = p.x;
+      startY = p.y;
+      currentRect = null;
+    });
+
+    canvas.addEventListener("mousemove", (e) => {
+      if (!drawing) return;
+      const p = toImageCoords(e);
+      currentRect = { x1: startX, y1: startY, x2: p.x, y2: p.y };
+
+      drawDetections(lastDetections);
+      const w = currentRect.x2 - currentRect.x1;
+      const h = currentRect.y2 - currentRect.y1;
+      ctx.strokeStyle = "#f5f5f5";
+      ctx.strokeRect(currentRect.x1, currentRect.y1, w, h);
+    });
+
+    canvas.addEventListener("mouseup", () => {
+      if (!drawing) return;
+      drawing = false;
+      if (!currentRect) return;
+
+      const x1 = Math.min(currentRect.x1, currentRect.x2);
+      const y1 = Math.min(currentRect.y1, currentRect.y2);
+      const x2 = Math.max(currentRect.x1, currentRect.x2);
+      const y2 = Math.max(currentRect.y1, currentRect.y2);
+      const w = x2 - x1;
+      const h = y2 - y1;
+
+      if (w < 10 || h < 10) {
+        drawDetections(lastDetections);
+        return;
+      }
+
+      let label = getSelectedLabel();
+      if (!label) {
+        const input = window.prompt("Label for this box:");
+        if (!input) {
+          drawDetections(lastDetections);
+          return;
+        }
+        label = input.trim();
+        if (!label) {
+          drawDetections(lastDetections);
+          return;
+        }
+      }
+
+      const det = {
+        label: label,
+        category: "object",
+        bbox: {
+          x: Math.round(x1),
+          y: Math.round(y1),
+          w: Math.round(w),
+          h: Math.round(h)
+        },
+        confidence: null,
+        legend: label
+      };
+
+      lastDetections.push(det);
+      updateTable(lastDetections);
+      drawDetections(lastDetections);
+      trainRect(det, label);
+    });
+
+    // --- Controls ---
+    fileInput.addEventListener("change", () => {
+      const file = fileInput.files[0];
+      if (!file) return;
+      const url = URL.createObjectURL(file);
+      video.src = url;
+      video.play();
+      btnAnalyze.disabled = false;
+    });
+
+    btnPlay.addEventListener("click", () => video.play());
+    btnPause.addEventListener("click", () => video.pause());
+    btnAnalyze.addEventListener("click", () => {
+      video.pause();
+      analyzeFrame();
+    });
+
+    btnAuto.addEventListener("click", () => setAuto(!autoAnalyze));
+    btnLearn.addEventListener("click", () => setLearningMode(!learningMode));
+
+    btnApplyLabel.addEventListener("click", () => {
+      if (selectedIndex === -1) {
+        window.alert("Select a row in the table first.");
+        return;
+      }
+      const label = getSelectedLabel();
+      if (!label) {
+        window.alert("Select or enter a label first.");
+        return;
+      }
+      updateDetectionLabel(selectedIndex, label);
+    });
+
+    video.addEventListener("loadedmetadata", () => {
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    });
+
+    // Stage buttons
+    btnStageNone.addEventListener("click", () => setStage(null));
+    btnStagePre.addEventListener("click", () => setStage("pre"));
+    btnStagePost.addEventListener("click", () => setStage("post"));
+
+    // --- init ---
+    setLearningMode(false);
+    setStage(null);
+    updateBackendStatus("not tested", false);
+    updateContaminationScale(1);
+  });
+  </script>
+</body>
+</html>

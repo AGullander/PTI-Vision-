@@ -1,0 +1,15 @@
+# Ignore heavy/local artifacts at repository root
+
+# Do not push model directories
+models/
+
+# Optional: common training artifacts (uncomment if you also want these ignored)
+# runs/
+# model_backups/
+# *.pt
+# yolo_dataset/
+# yolo_dataset.zip
+# model_backups.zip
+# __pycache__/
+# .DS_Store
+# .env

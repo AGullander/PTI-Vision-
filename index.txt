@@ -1,0 +1,605 @@
+
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8" />
+  <title>MCS Robotics – Container Inspector</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #0b1020;
+      color: #f5f5f5;
+    }
+    header {
+      background: linear-gradient(90deg, #0b1020, #1f3b5d);
+      padding: 1rem 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid #29354b;
+    }
+    header .logo {
+      font-size: 1.2rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+    }
+    header .subtitle {
+      font-size: 0.9rem;
+      opacity: 0.8;
+    }
+    main {
+      padding: 1.5rem 2rem 2rem;
+    }
+    .layout {
+      display: flex;
+      gap: 1.5rem;
+      align-items: flex-start;
+    }
+    .panel {
+      flex: 1;
+      background: #151a2b;
+      border-radius: 12px;
+      padding: 1rem 1.2rem 1.4rem;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.35);
+      border: 1px solid #222b3d;
+    }
+    .panel h2 {
+      margin-top: 0;
+      font-size: 1rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #aab7ff;
+    }
+    #video {
+      width: 100%;
+      border-radius: 10px;
+      background: #000;
+    }
+    .snapshot-wrapper {
+      position: relative;
+      margin-top: 0.5rem;
+    }
+    #snapshot {
+      width: 100%;
+      border-radius: 10px;
+      background: #000;
+      display: block;
+    }
+    #bbox-layer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      pointer-events: none;
+    }
+    .bbox {
+      position: absolute;
+      border: 2px solid #f97316;
+      box-shadow: 0 0 8px rgba(249,115,22,0.7);
+    }
+    .button-row {
+      margin-top: 0.75rem;
+      display: flex;
+      gap: 0.75rem;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    button {
+      border-radius: 999px;
+      border: none;
+      padding: 0.6rem 1.4rem;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      background: #3b82f6;
+      color: white;
+      box-shadow: 0 4px 10px rgba(59,130,246,0.4);
+      transition: transform 0.08s ease, box-shadow 0.08s ease, background 0.15s ease;
+    }
+    button.secondary {
+      background: #1f2937;
+      box-shadow: none;
+      color: #e5e7eb;
+    }
+    button.small {
+      padding: 0.2rem 0.8rem;
+      font-size: 0.75rem;
+      box-shadow: none;
+    }
+    button:disabled {
+      opacity: 0.6;
+      cursor: default;
+      box-shadow: none;
+    }
+    button:not(:disabled):hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 16px rgba(59,130,246,0.5);
+    }
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      padding: 0.2rem 0.7rem;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+    .status-ok {
+      background: rgba(16,185,129,0.18);
+      color: #6ee7b7;
+      border: 1px solid rgba(16,185,129,0.6);
+    }
+    .status-alert {
+      background: rgba(248,113,113,0.18);
+      color: #fecaca;
+      border: 1px solid rgba(248,113,113,0.7);
+    }
+    .stat-row {
+      display: flex;
+      justify-content: space-between;
+      margin: 0.4rem 0;
+      font-size: 0.9rem;
+    }
+    .stat-label {
+      opacity: 0.7;
+    }
+    .stat-value {
+      font-weight: 600;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 0.75rem;
+      font-size: 0.85rem;
+    }
+    table thead {
+      opacity: 0.7;
+    }
+    th, td {
+      padding: 0.35rem 0.3rem;
+      text-align: left;
+    }
+    tbody tr:nth-child(odd) {
+      background: rgba(15,23,42,0.7);
+    }
+    tbody tr:nth-child(even) {
+      background: rgba(15,23,42,0.3);
+    }
+    tr.clickable:hover {
+      background: rgba(59,130,246,0.2);
+      cursor: pointer;
+    }
+    .small {
+      font-size: 0.75rem;
+      opacity: 0.7;
+    }
+    .log-table {
+      margin-top: 1rem;
+      border-top: 1px solid #232a3e;
+      padding-top: 0.6rem;
+    }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.1rem 0.55rem;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      border: 1px solid #374151;
+      background: rgba(17,24,39,0.7);
+    }
+    #error {
+      margin-top: 0.5rem;
+      color: #fecaca;
+      font-size: 0.8rem;
+      min-height: 1em;
+    }
+    input[type="file"] {
+      font-size: 0.8rem;
+    }
+    .id-locked {
+      font-size: 0.75rem;
+      opacity: 0.8;
+      margin-left: 0.5rem;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <div class="logo">MCS Robotics</div>
+      <div class="subtitle">Container Inspector · Video Prototype</div>
+    </div>
+    <div class="small">
+      Status: <span class="pill" id="connection-status">Backend: ok?</span>
+    </div>
+  </header>
+
+  <main>
+    <div class="layout">
+      <!-- VÄNSTER PANEL: Videofil + snapshot -->
+      <section class="panel">
+        <h2>Videofil & insamling</h2>
+
+        <div class="button-row">
+          <input type="file" id="video-file-input" accept="video/*" />
+          <span class="small">
+            1. Välj videofil · 2. Spela upp · 3. Pausa eller kör auto-analys.
+          </span>
+        </div>
+
+        <video id="video" controls></video>
+
+        <div class="button-row" style="margin-top: 0.75rem;">
+          <button id="scan-btn">Skanna container</button>
+          <button id="auto-btn" class="secondary">Auto-analysera hela videon</button>
+        </div>
+
+        <div id="error"></div>
+
+        <div style="margin-top: 1rem;">
+          <div class="small">Senaste analyserade bild:</div>
+          <div class="snapshot-wrapper">
+            <img id="snapshot" alt="Senaste snapshot" />
+            <div id="bbox-layer"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- HÖGER PANEL: Resultat + logg -->
+      <section class="panel">
+        <h2>Resultat & avvikelser</h2>
+        <div class="stat-row">
+          <div class="stat-label">Container-ID</div>
+          <div class="stat-value">
+            <span id="container-id">–</span>
+            <span id="id-locked-indicator" class="id-locked"></span>
+          </div>
+        </div>
+        <div class="stat-row">
+          <div class="stat-label">Senaste status</div>
+          <div class="stat-value">
+            <span class="status-badge" id="status-badge">
+              Ingen data
+            </span>
+          </div>
+        </div>
+        <div class="stat-row">
+          <div class="stat-label">Senast skannad</div>
+          <div class="stat-value" id="last-scanned">–</div>
+        </div>
+
+        <h3 style="margin-top: 1rem; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.08em; color:#9ca3af;">
+          Identifierade objekt
+        </h3>
+        <table id="detections-table">
+          <thead>
+            <tr>
+              <th>Objekt</th>
+              <th>Kategori</th>
+              <th>Sev</th>
+              <th>Konf.</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+        <div class="small" style="margin-top:0.3rem;">
+          Träna-läge: dubbelklicka på en <strong>märkning</strong> för att döpa om (t.ex. till "Human").
+        </div>
+
+        <div class="log-table">
+          <div class="small">Senaste skanningar</div>
+          <table id="log-table">
+            <thead>
+              <tr>
+                <th>Tid</th>
+                <th>Container</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <canvas id="hidden-canvas" style="display:none;"></canvas>
+
+  <script>
+    const video = document.getElementById('video');
+    const scanBtn = document.getElementById('scan-btn');
+    const autoBtn = document.getElementById('auto-btn');
+    const fileInput = document.getElementById('video-file-input');
+    const snapshotImg = document.getElementById('snapshot');
+    const bboxLayer = document.getElementById('bbox-layer');
+    const errorDiv = document.getElementById('error');
+    const containerIdSpan = document.getElementById('container-id');
+    const idLockedIndicator = document.getElementById('id-locked-indicator');
+    const lastScannedSpan = document.getElementById('last-scanned');
+    const statusBadge = document.getElementById('status-badge');
+    const detectionsTableBody = document.querySelector('#detections-table tbody');
+    const logTableBody = document.querySelector('#log-table tbody');
+    const hiddenCanvas = document.getElementById('hidden-canvas');
+    const connectionStatus = document.getElementById('connection-status');
+
+    const BACKEND_ANALYZE_URL = 'http://127.0.0.1:8000/api/analyze';
+    const BACKEND_TRAIN_URL = 'http://127.0.0.1:8000/api/train_marking';
+
+    let lastLogEntries = [];
+    let autoRunning = false;
+    let lastFrameWidth = 0;
+    let lastFrameHeight = 0;
+    let lockedContainerId = null;
+    let lastDetections = [];
+
+    function sleep(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    // Välj videofil
+    fileInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const url = URL.createObjectURL(file);
+      video.src = url;
+      video.play();
+      errorDiv.textContent = '';
+    });
+
+    async function analyzeFrame() {
+      if (!video.src) {
+        errorDiv.textContent = 'Ingen videofil vald.';
+        return;
+      }
+      if (video.videoWidth === 0 || video.videoHeight === 0) {
+        errorDiv.textContent = 'Videon är inte redo. Spela upp eller pausa och försök igen.';
+        return;
+      }
+
+      scanBtn.disabled = true;
+      errorDiv.textContent = 'Analyserar bild...';
+
+      hiddenCanvas.width = video.videoWidth;
+      hiddenCanvas.height = video.videoHeight;
+      const ctx = hiddenCanvas.getContext('2d');
+      ctx.drawImage(video, 0, 0, hiddenCanvas.width, hiddenCanvas.height);
+
+      lastFrameWidth = hiddenCanvas.width;
+      lastFrameHeight = hiddenCanvas.height;
+
+      snapshotImg.src = hiddenCanvas.toDataURL('image/jpeg');
+
+      return new Promise((resolve) => {
+        hiddenCanvas.toBlob(async (blob) => {
+          try {
+            const formData = new FormData();
+            formData.append('image', blob, 'frame.jpg');
+
+            const res = await fetch(BACKEND_ANALYZE_URL, {
+              method: 'POST',
+              body: formData
+            });
+
+            if (!res.ok) {
+              throw new Error('API-svar: ' + res.status);
+            }
+
+            const data = await res.json();
+            updateUIWithResult(data);
+            errorDiv.textContent = '';
+          } catch (err) {
+            console.error(err);
+            errorDiv.textContent = 'Kunde inte analysera bild: ' + err.message;
+          } finally {
+            scanBtn.disabled = false;
+            resolve();
+          }
+        }, 'image/jpeg', 0.9);
+      });
+    }
+
+    function drawBoundingBoxes(detections) {
+      bboxLayer.innerHTML = '';
+
+      if (!lastFrameWidth || !lastFrameHeight) return;
+      const displayWidth = snapshotImg.clientWidth;
+      const displayHeight = snapshotImg.clientHeight;
+      if (!displayWidth || !displayHeight) return;
+
+      const scaleX = displayWidth / lastFrameWidth;
+      const scaleY = displayHeight / lastFrameHeight;
+
+      detections.forEach(det => {
+        if (!det.bbox) return;
+        const { x, y, w, h } = det.bbox;
+
+        const box = document.createElement('div');
+        box.className = 'bbox';
+        box.style.left = (x * scaleX) + 'px';
+        box.style.top = (y * scaleY) + 'px';
+        box.style.width = (w * scaleX) + 'px';
+        box.style.height = (h * scaleY) + 'px';
+
+        bboxLayer.appendChild(box);
+      });
+    }
+
+    function updateUIWithResult(result) {
+      const incomingId = result.container_id || 'UNKNOWN';
+
+      // Lås container-ID: första gången vi får ett riktigt ID, behåll det
+      if (incomingId !== 'UNKNOWN') {
+        if (!lockedContainerId) {
+          lockedContainerId = incomingId;
+        } else if (lockedContainerId !== incomingId) {
+          // om du senare vill hantera flera containrar kan du ändra logik här
+          lockedContainerId = incomingId;
+        }
+      }
+
+      const idToShow = lockedContainerId || incomingId;
+      containerIdSpan.textContent = idToShow;
+      idLockedIndicator.textContent = lockedContainerId ? '(låst)' : '';
+
+      const detections = result.detections || [];
+      const status = result.status || 'unknown';
+      const timestamp = result.timestamp || new Date().toISOString();
+
+      lastDetections = detections;
+
+      lastScannedSpan.textContent = new Date(timestamp).toLocaleString();
+
+      statusBadge.textContent = status === 'ok' ? 'OK' : 'AVVIKELSE';
+      statusBadge.className = 'status-badge ' + (status === 'ok' ? 'status-ok' : 'status-alert');
+
+      detectionsTableBody.innerHTML = '';
+      detections.forEach((det, idx) => {
+        const tr = document.createElement('tr');
+        tr.classList.add('clickable');
+
+        const tdLabel = document.createElement('td');
+        const tdCat = document.createElement('td');
+        const tdSev = document.createElement('td');
+        const tdConf = document.createElement('td');
+
+        tdLabel.textContent = det.label || '-';
+        tdCat.textContent = det.category || '-';
+        tdSev.textContent = det.severity || '-';
+        tdConf.textContent = det.confidence != null ? (det.confidence * 100).toFixed(1) + '%' : '-';
+
+        tr.appendChild(tdLabel);
+        tr.appendChild(tdCat);
+        tr.appendChild(tdSev);
+        tr.appendChild(tdConf);
+
+        // Träna-läge: dubbelklick på marking
+        tr.addEventListener('dblclick', () => {
+          if (det.category === 'marking' && det.code) {
+            trainMarking(det, idx);
+          }
+        });
+
+        detectionsTableBody.appendChild(tr);
+      });
+
+      drawBoundingBoxes(detections);
+
+      lastLogEntries.unshift({
+        timestamp,
+        container_id: idToShow,
+        status
+      });
+      lastLogEntries = lastLogEntries.slice(0, 10);
+
+      logTableBody.innerHTML = '';
+      lastLogEntries.forEach(entry => {
+        const tr = document.createElement('tr');
+        const tdTime = document.createElement('td');
+        const tdId = document.createElement('td');
+        const tdStatus = document.createElement('td');
+
+        tdTime.textContent = new Date(entry.timestamp).toLocaleTimeString();
+        tdId.textContent = entry.container_id;
+        tdStatus.textContent = entry.status === 'ok' ? 'OK' : 'AVVIKELSE';
+
+        tr.appendChild(tdTime);
+        tr.appendChild(tdId);
+        tr.appendChild(tdStatus);
+        logTableBody.appendChild(tr);
+      });
+    }
+
+    async function trainMarking(det, idx) {
+      const current = det.label || det.code || '';
+      const suggestion = current || (det.code ? `Märkning ${det.code}` : '');
+      const title = window.prompt(
+        `Ny titel för märkning ${det.code} (t.ex. "Human", "Reefer 45R1")`,
+        suggestion
+      );
+      if (!title) return;
+
+      try {
+        const res = await fetch(BACKEND_TRAIN_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code: det.code, title })
+        });
+        if (!res.ok) {
+          throw new Error('API-svar: ' + res.status);
+        }
+        const data = await res.json();
+        // Uppdatera lokalen label direkt
+        lastDetections[idx].label = data.title;
+        updateUIWithResult({
+          container_id: lockedContainerId || 'UNKNOWN',
+          status: statusBadge.textContent === 'OK' ? 'ok' : 'alert',
+          detections: lastDetections,
+          timestamp: new Date().toISOString(),
+        });
+      } catch (err) {
+        console.error(err);
+        window.alert('Kunde inte spara träning: ' + err.message);
+      }
+    }
+
+    async function autoAnalyze() {
+      if (!video.src) {
+        errorDiv.textContent = 'Ingen videofil vald.';
+        return;
+      }
+
+      if (autoRunning) {
+        autoRunning = false;
+        autoBtn.textContent = 'Auto-analysera hela videon';
+        errorDiv.textContent = '';
+        return;
+      }
+
+      autoRunning = true;
+      autoBtn.textContent = 'Stoppa auto-analys';
+      errorDiv.textContent = 'Auto-analys pågår...';
+
+      if (video.paused) {
+        await video.play();
+      }
+
+      while (autoRunning && !video.ended) {
+        await analyzeFrame();
+        await sleep(1000);
+
+        if (video.ended) break;
+        if (video.paused) {
+          while (autoRunning && video.paused && !video.ended) {
+            await sleep(500);
+          }
+        }
+      }
+
+      autoRunning = false;
+      autoBtn.textContent = 'Auto-analysera hela videon';
+      errorDiv.textContent = '';
+    }
+
+    async function checkBackend() {
+      try {
+        const res = await fetch(BACKEND_ANALYZE_URL, { method: 'OPTIONS' });
+        if (res.ok) {
+          connectionStatus.textContent = 'Backend: ansluten';
+        } else {
+          connectionStatus.textContent = 'Backend: ej kontakt';
+        }
+      } catch (err) {
+        connectionStatus.textContent = 'Backend: ej kontakt';
+      }
+    }
+
+    scanBtn.addEventListener('click', () => { analyzeFrame(); });
+    autoBtn.addEventListener('click', autoAnalyze);
+
+    checkBackend();
+  </script>
+</body>
+</html>

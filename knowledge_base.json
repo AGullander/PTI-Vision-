@@ -1,0 +1,252 @@
+{
+  "classes": {
+    "Dirt": {
+      "display_name": "Dirt",
+      "category": "dirt",
+      "risk_weight": 2
+    },
+    "Smuts": {
+      "display_name": "Smuts",
+      "category": "dirt",
+      "risk_weight": 2
+    },
+    "Dark spot": {
+      "display_name": "Dark spot",
+      "category": "dirt",
+      "risk_weight": 3
+    },
+    "Mold": {
+      "display_name": "Mold",
+      "category": "dirt",
+      "risk_weight": 3
+    },
+    "Mögel": {
+      "display_name": "Mögel",
+      "category": "dirt",
+      "risk_weight": 3
+    },
+    "Missfärgning": {
+      "display_name": "Missfärgning",
+      "category": "dirt",
+      "risk_weight": 1
+    },
+    "DamageDent": {
+      "display_name": "DamageDent",
+      "category": "damage",
+      "risk_weight": 4
+    },
+    "Buckla": {
+      "display_name": "Buckla",
+      "category": "damage",
+      "risk_weight": 4
+    },
+    "Skada (medium)": {
+      "display_name": "Skada (medium)",
+      "category": "damage",
+      "risk_weight": 4
+    },
+    "Skada": {
+      "display_name": "Skada",
+      "category": "damage",
+      "risk_weight": 4
+    },
+    "Scratch": {
+      "display_name": "Scratch",
+      "category": "damage",
+      "risk_weight": 2
+    },
+    "Repa": {
+      "display_name": "Repa",
+      "category": "damage",
+      "risk_weight": 2
+    },
+    "Hole": {
+      "display_name": "Hole",
+      "category": "damage",
+      "risk_weight": 6
+    },
+    "Hål": {
+      "display_name": "Hål",
+      "category": "damage",
+      "risk_weight": 6
+    },
+    "Crack": {
+      "display_name": "Crack",
+      "category": "damage",
+      "risk_weight": 5
+    },
+    "Spricka": {
+      "display_name": "Spricka",
+      "category": "damage",
+      "risk_weight": 5
+    },
+    "Rust": {
+      "display_name": "Rust",
+      "category": "damage",
+      "risk_weight": 3
+    },
+    "Rost": {
+      "display_name": "Rost",
+      "category": "damage",
+      "risk_weight": 3
+    },
+    "Human": {
+      "display_name": "Human",
+      "category": "human",
+      "risk_weight": 1
+    },
+    "Person": {
+      "display_name": "Person",
+      "category": "human",
+      "risk_weight": 1
+    },
+    "Människa": {
+      "display_name": "Människa",
+      "category": "human",
+      "risk_weight": 1
+    },
+    "person": {
+      "display_name": "person",
+      "category": "human",
+      "risk_weight": 1
+    },
+    "Vehicle": {
+      "display_name": "Vehicle",
+      "category": "vehicle",
+      "risk_weight": 1
+    },
+    "Fordon": {
+      "display_name": "Fordon",
+      "category": "vehicle",
+      "risk_weight": 1
+    },
+    "Truck": {
+      "display_name": "Truck",
+      "category": "vehicle",
+      "risk_weight": 1
+    },
+    "truck": {
+      "display_name": "truck",
+      "category": "vehicle",
+      "risk_weight": 1
+    },
+    "car": {
+      "display_name": "car",
+      "category": "vehicle",
+      "risk_weight": 1
+    },
+    "Door": {
+      "display_name": "Door",
+      "category": "structure",
+      "risk_weight": 0
+    },
+    "Containerdörr": {
+      "display_name": "Containerdörr",
+      "category": "structure",
+      "risk_weight": 0
+    },
+    "Containerdoor": {
+      "display_name": "Containerdoor",
+      "category": "structure",
+      "risk_weight": 0
+    },
+    "Blocked door": {
+      "display_name": "Blocked door",
+      "category": "obstruction",
+      "risk_weight": 3
+    },
+    "Blockerad dörr": {
+      "display_name": "Blockerad dörr",
+      "category": "obstruction",
+      "risk_weight": 3
+    },
+    "Lock": {
+      "display_name": "Lock",
+      "category": "lock",
+      "risk_weight": 0
+    },
+    "Lås": {
+      "display_name": "Lås",
+      "category": "lock",
+      "risk_weight": 0
+    },
+    "Label": {
+      "display_name": "Label",
+      "category": "marking",
+      "risk_weight": 0
+    },
+    "Märke": {
+      "display_name": "Märke",
+      "category": "marking",
+      "risk_weight": 0
+    },
+    "ID": {
+      "display_name": "ID",
+      "category": "marking",
+      "risk_weight": 0
+    },
+    "Löst föremål": {
+      "display_name": "Löst föremål",
+      "category": "obstruction",
+      "risk_weight": 2
+    },
+    "Loose object": {
+      "display_name": "Loose object",
+      "category": "obstruction",
+      "risk_weight": 2
+    },
+    "Slang": {
+      "display_name": "Slang",
+      "category": "equipment",
+      "risk_weight": 0
+    },
+    "Hose": {
+      "display_name": "Hose",
+      "category": "equipment",
+      "risk_weight": 0
+    },
+    "Nozzle": {
+      "display_name": "Nozzle",
+      "category": "equipment",
+      "risk_weight": 0
+    },
+    "Handtag/Nozzle": {
+      "display_name": "Handtag/Nozzle",
+      "category": "equipment",
+      "risk_weight": 0
+    },
+    "IGNORE": {
+      "display_name": "__IGNORE__",
+      "category": "ignore",
+      "risk_weight": 0
+    }
+  },
+  "rules": [
+    {
+      "id": "multiple_damage",
+      "description": "Multiple damage detections increase risk",
+      "required_categories": ["damage"],
+      "min_count": 2,
+      "risk_delta": 3
+    },
+    {
+      "id": "dirt_and_damage",
+      "description": "Combination of dirt and damage is concerning",
+      "required_categories": ["dirt", "damage"],
+      "risk_delta": 2
+    },
+    {
+      "id": "blocked_with_human",
+      "description": "Blocked door with person nearby is risky",
+      "required_categories": ["obstruction", "human"],
+      "risk_delta": 4
+    },
+    {
+      "id": "heavy_contamination",
+      "description": "Multiple dirt/mold spots indicate contamination",
+      "required_categories": ["dirt"],
+      "min_count": 3,
+      "risk_delta": 2
+    }
+  ]
+}

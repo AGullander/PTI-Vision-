@@ -1,0 +1,34 @@
+path: C:/Users/HP/Downloads/container-prototyp/container-prototyp/yolo_dataset
+train: images/train
+val: images/val
+
+nc: 28
+names:
+  0: Handtag/Nozzle
+  1: Person
+  2: Dirt
+  3: DamageDent
+  4: Vehicle
+  5: Människa
+  6: Slang
+  7: Skada (medium)
+  8: CustomObject
+  9: Blocked door
+  10: Fordon
+  11: Löst föremål
+  12: Label
+  13: Hose
+  14: DamageScratch
+  15: Blockerad dörr
+  16: Door
+  17: Buckla
+  18: Nozzle
+  19: ID
+  20: Lock
+  21: Containerdörr
+  22: Märke
+  23: Smuts
+  24: Human
+  25: Truck
+  26: Containerdoor
+  27: Lås
