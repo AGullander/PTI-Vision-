@@ -878,17 +878,35 @@ def detect_dark_spots(
     _, std_L_mat = cv2.meanStdDev(L)
     std_L = float(std_L_mat[0][0]) + 1e-6
 
-    # Background level - 75th percentile for light background estimation
+    # Improved background estimation using adaptive approach
+    # Use multiple percentiles and choose the most appropriate one
     flat_L = L.flatten()
-    bg_L = float(np.percentile(flat_L, 75))
+    p50 = float(np.percentile(flat_L, 50))  # Median
+    p70 = float(np.percentile(flat_L, 70))
+    p80 = float(np.percentile(flat_L, 80))
+    
+    # For metallic/grey containers with varied lighting, median is often better
+    # For bright/white containers, higher percentile works better
+    # Choose based on image brightness distribution
+    if p80 - p50 > 30:
+        # High contrast image - use lower percentile to avoid overestimating background
+        bg_L = p70
+    elif p50 > 140:
+        # Bright image - use higher percentile
+        bg_L = p80
+    else:
+        # Normal/darker image - use median-based estimate
+        bg_L = (p50 + p70) / 2.0
+    
+    dbg(f"detect_dark_spots: adaptive bg estimation: p50={p50:.1f}, p70={p70:.1f}, p80={p80:.1f}, chosen bg_L={bg_L:.1f}")
 
     # Adaptive background threshold based on mode
     if spot_mode == "sensitive":
-        min_bg_L = 140.0  # Accept slightly darker backgrounds
+        min_bg_L = 130.0  # Accept darker backgrounds
     elif spot_mode == "mold_only":
-        min_bg_L = 175.0  # Require very light background
-    else:  # auto
-        min_bg_L = 145.0  # Slightly more permissive for catching mold
+        min_bg_L = 160.0  # Require light background but more permissive
+    else:  # auto - lowered to catch mold in more lighting conditions
+        min_bg_L = 130.0  # More permissive to catch mold in various lighting
 
     if bg_L < min_bg_L:
         dbg(f"detect_dark_spots: skipping, bg_L={bg_L:.1f} < {min_bg_L}")
@@ -910,19 +928,20 @@ def detect_dark_spots(
     dbg(f"detect_dark_spots: bg_L={bg_L:.1f}, std_L={std_L:.1f}, min_L={flat_L.min():.1f}, threshold_L={bg_L - 0.4*std_L:.1f}")
 
     # Thresholds based on mode
-    # Real-world container dirt/stains typically have dark_delta 0.3-0.7
+    # Real-world container dirt/stains typically have dark_delta 0.2-0.5
+    # Mold detection optimized with lower thresholds to catch subtle mold
     if spot_mode == "mold_only":
-        darker = L < (bg_L - 1.0 * std_L)
-        low_chroma = chroma_z < 1.5
-        dark_delta_threshold = 1.5  # Only very dark spots (likely mold)
+        darker = L < (bg_L - 0.5 * std_L)  # More permissive for mold-only mode
+        low_chroma = chroma_z < 2.5  # Mold is usually low chroma but allow some
+        dark_delta_threshold = 0.8  # Lower threshold for mold-only mode
     elif spot_mode == "sensitive":
-        darker = L < (bg_L - 0.2 * std_L)  # Very sensitive
-        low_chroma = chroma_z < 4.0  # Allow any color
-        dark_delta_threshold = 0.3  # Catch even subtle stains
-    else:  # auto - based on real container inspection data
-        darker = L < (bg_L - 0.3 * std_L)  # Catch light stains
-        low_chroma = chroma_z < 3.5  # Allow colored stains (rust, water marks)
-        dark_delta_threshold = 0.4  # Real dirt has dark_delta ~0.45-0.65
+        darker = L < (bg_L - 0.10 * std_L)  # Very sensitive
+        low_chroma = chroma_z < 5.0  # Allow any color
+        dark_delta_threshold = 0.15  # Catch even very subtle stains/mold
+    else:  # auto - optimized for mold detection
+        darker = L < (bg_L - 0.12 * std_L)  # Very sensitive to catch subtle mold
+        low_chroma = chroma_z < 4.0  # Allow colored stains (rust, water marks, colored mold)
+        dark_delta_threshold = 0.18  # Much lower to catch mold in varied lighting
 
     mask = np.logical_and(darker, low_chroma)
     
@@ -947,19 +966,19 @@ def detect_dark_spots(
     detections: List[Detection] = []
     img_area = float(w * h)
 
-    # Size thresholds - slightly more permissive
+    # Size thresholds - more permissive for mold detection
     if spot_mode == "sensitive":
-        min_area_ratio = 0.00006   # ~120 px on 1920x1080
+        min_area_ratio = 0.00004   # ~80 px on 1920x1080 - catch smaller mold spots
         small_max_ratio = 0.008
         big_max_ratio = 0.15
     elif spot_mode == "mold_only":
-        min_area_ratio = 0.00015
+        min_area_ratio = 0.00008  # Lowered to catch smaller mold spots
         small_max_ratio = 0.005
         big_max_ratio = 0.10
-    else:  # auto - optimized for mold detection
-        min_area_ratio = 0.00005   # ~100 px on 1920x1080 (catch smaller spots)
-        small_max_ratio = 0.008    # Allow slightly larger "small" spots
-        big_max_ratio = 0.15       # Allow larger contamination areas
+    else:  # auto - optimized for mold detection (catch all mold spots)
+        min_area_ratio = 0.000015  # Even lower to catch very tiny mold spots (~30 px on 1920x1080)
+        small_max_ratio = 0.010    # Allow larger "small" spots
+        big_max_ratio = 0.20       # Allow larger contamination areas
 
     min_area = img_area * min_area_ratio
     small_max_area = img_area * small_max_ratio
@@ -985,9 +1004,10 @@ def detect_dark_spots(
 
         is_small = area <= small_max_area
 
-        # Small spots: require some shape coherence but allow elongated shapes (streaks)
-        # Lowered from 0.4 to 0.10 to catch streak-like contamination
-        if is_small and circularity < 0.10:
+        # Small spots: require minimal shape coherence
+        # Mold can form in very irregular patterns, so we're very permissive
+        # Only reject extremely fragmented/noisy detections
+        if is_small and circularity < 0.03:
             rejected_circ += 1
             continue
 
@@ -1018,22 +1038,43 @@ def detect_dark_spots(
             continue
 
         # Confidence scales with darkness
+        # Adjusted to give reasonable confidence even for lower dark_delta values
+        # dark_delta 0.25 -> conf ~0.46, dark_delta 0.5 -> conf ~0.48, dark_delta 1.0 -> conf ~0.50
         raw_score = max(0.0, min(10.0, dark_delta))
-        conf = 0.45 + 0.05 * raw_score
-        conf = max(0.45, min(0.99, conf))
+        conf = 0.40 + 0.10 * raw_score  # More generous confidence for lower values
+        conf = max(0.40, min(0.99, conf))  # Minimum 40% confidence for detected spots
 
         bbox = BBox(x=x_full, y=y_full, w=bw, h=bh)
 
         # Categorize based on size and darkness
-        if dark_delta > 4.0 or area > img_area * 0.01:
-            label = "Mold/Dark Spot"
+        # Prioritize mold labeling - dark spots in containers are likely mold
+        # Thresholds significantly lowered to catch subtle mold
+        if dark_delta > 1.5:
+            label = "Heavy Mold"
+            category = "dirt"
+        elif dark_delta > 0.8:
+            label = "Mold Spot"
+            category = "dirt"
+        elif area > img_area * 0.01:
+            label = "Large Mold Area"
+            category = "dirt"
+        elif dark_delta > 0.4:
+            label = "Mold/Contamination Spot"
+            category = "dirt"
+        elif dark_delta > 0.25:
+            label = "Mold/Mildew Spot"
+            category = "dirt"
+        elif dark_delta > 0.18:
+            label = "Suspected Mold"
+            category = "dirt"
         else:
-            label = "Dark spot"
+            label = "Contamination Spot"
+            category = "dirt"
 
         detections.append(
             Detection(
                 label=label,
-                category="dirt",
+                category=category,
                 confidence=conf,
                 bbox=bbox,
                 legend=f"{label} ({conf*100:.1f}%)",
@@ -1074,6 +1115,411 @@ def detect_dark_spots(
     return detections
 
 
+# ---------------- Color-based mold detection ----------------
+
+def detect_mold_by_color(
+    frame_bgr: np.ndarray,
+    roi_margin_ratio: float = 0.01,
+) -> List[Detection]:
+    """
+    Detects mold by analyzing color signatures in HSV and LAB color spaces.
+    
+    Mold typically appears as:
+    - Greenish patches (green/grey-green mold)
+    - Brownish/tan patches (brown mold, water damage)
+    - Dark grey/black patches with slight color tint
+    
+    This complements dark_spot detection by catching mold that may not be
+    very dark but has distinctive mold colors.
+    """
+    h, w, _ = frame_bgr.shape
+    if h == 0 or w == 0:
+        return []
+    
+    # Convert to HSV and LAB color spaces
+    hsv = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2HSV)
+    lab = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2LAB)
+    
+    H, S, V = cv2.split(hsv)
+    L, A, B = cv2.split(lab)
+    
+    # Convert to float for analysis
+    H = H.astype(np.float32)
+    S = S.astype(np.float32)
+    V = V.astype(np.float32)
+    L = L.astype(np.float32)
+    A = A.astype(np.float32)
+    B = B.astype(np.float32)
+    
+    # Background estimation - use median for robustness
+    bg_L = float(np.percentile(L.flatten(), 70))
+    bg_V = float(np.percentile(V.flatten(), 70))
+    
+    # Skip if image is too dark overall (can't reliably detect color)
+    if bg_L < 80 or bg_V < 60:
+        dbg(f"detect_mold_by_color: skipping, bg_L={bg_L:.1f}, bg_V={bg_V:.1f} (too dark)")
+        return []
+    
+    # === GREEN MOLD DETECTION ===
+    # Green mold: H in green range (35-85), low-medium saturation, not too bright
+    # In OpenCV HSV: H is 0-180, S is 0-255, V is 0-255
+    green_h_low, green_h_high = 30, 90  # Hue range for green
+    green_mask = np.logical_and.reduce([
+        H >= green_h_low,
+        H <= green_h_high,
+        S >= 15,  # Some saturation (not pure grey)
+        S <= 180,  # Not oversaturated
+        V >= 30,  # Not too dark
+        V <= 200,  # Not too bright (mold is usually darker)
+        L < bg_L - 5,  # Slightly darker than background
+    ])
+    
+    # Also use LAB A channel: A < 128 indicates green tones
+    lab_green_mask = np.logical_and(
+        A < 125,  # Green side of A channel
+        L < bg_L  # Darker than background
+    )
+    green_mask = np.logical_or(green_mask, lab_green_mask)
+    
+    # === BROWN/TAN MOLD DETECTION ===
+    # Brown mold: H in orange-brown range (5-25), low-medium saturation
+    brown_h_low, brown_h_high = 5, 30
+    brown_mask = np.logical_and.reduce([
+        H >= brown_h_low,
+        H <= brown_h_high,
+        S >= 20,  # Some saturation
+        S <= 200,
+        V >= 40,
+        V <= 180,
+        L < bg_L,  # Darker than background
+    ])
+    
+    # LAB B channel: B > 128 indicates yellow/brown tones
+    lab_brown_mask = np.logical_and.reduce([
+        B > 132,  # Yellow/brown side
+        A > 125,  # Slightly red side (brown = red + yellow)
+        L < bg_L - 5,
+    ])
+    brown_mask = np.logical_or(brown_mask, lab_brown_mask)
+    
+    # === GREY-BLACK MOLD DETECTION ===
+    # Dark grey mold: very low saturation, darker than surroundings
+    # This catches black mold that might have slight color tint
+    grey_mold_mask = np.logical_and.reduce([
+        S < 40,  # Very low saturation (grey)
+        V < bg_V * 0.7,  # Significantly darker than background
+        L < bg_L * 0.75,  # Dark in LAB too
+    ])
+    
+    # Combine all mold masks
+    combined_mask = np.logical_or.reduce([green_mask, brown_mask, grey_mold_mask])
+    
+    # Convert to uint8 for morphological operations
+    mask_u8 = np.zeros((h, w), dtype=np.uint8)
+    mask_u8[combined_mask] = 255
+    
+    # Morphological operations to clean up noise and connect nearby regions
+    kernel_small = np.ones((3, 3), np.uint8)
+    kernel_med = np.ones((5, 5), np.uint8)
+    
+    # Remove noise
+    mask_u8 = cv2.morphologyEx(mask_u8, cv2.MORPH_OPEN, kernel_small, iterations=1)
+    # Connect nearby regions
+    mask_u8 = cv2.morphologyEx(mask_u8, cv2.MORPH_CLOSE, kernel_med, iterations=2)
+    
+    # Apply ROI margin
+    margin_x = int(w * roi_margin_ratio)
+    margin_y = int(h * roi_margin_ratio)
+    roi = mask_u8[margin_y:h - margin_y, margin_x:w - margin_x]
+    
+    # Find contours
+    contours, _ = cv2.findContours(roi, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    
+    detections: List[Detection] = []
+    img_area = float(w * h)
+    
+    # Size thresholds
+    min_area = img_area * 0.00003  # Very small mold spots (~60px on 1920x1080)
+    max_area = img_area * 0.15  # Large contamination areas
+    
+    dbg(f"detect_mold_by_color: found {len(contours)} contours, min_area={min_area:.0f}")
+    
+    for cnt in contours:
+        area = cv2.contourArea(cnt)
+        if area < min_area or area > max_area:
+            continue
+        
+        # Get bounding box
+        x, y, bw, bh = cv2.boundingRect(cnt)
+        x_full = x + margin_x
+        y_full = y + margin_y
+        
+        # Clamp to image bounds
+        x_full = max(0, min(x_full, w - 1))
+        y_full = max(0, min(y_full, h - 1))
+        bw = max(1, min(bw, w - x_full))
+        bh = max(1, min(bh, h - y_full))
+        
+        # Analyze the detected region to determine mold type
+        patch_H = H[y_full:y_full + bh, x_full:x_full + bw]
+        patch_S = S[y_full:y_full + bh, x_full:x_full + bw]
+        patch_A = A[y_full:y_full + bh, x_full:x_full + bw]
+        patch_B = B[y_full:y_full + bh, x_full:x_full + bw]
+        patch_L = L[y_full:y_full + bh, x_full:x_full + bw]
+        
+        if patch_H.size == 0:
+            continue
+        
+        mean_H = float(np.mean(patch_H))
+        mean_S = float(np.mean(patch_S))
+        mean_A = float(np.mean(patch_A))
+        mean_B = float(np.mean(patch_B))
+        mean_L = float(np.mean(patch_L))
+        
+        # Classify mold type based on color
+        if mean_A < 120 and green_h_low <= mean_H <= green_h_high:
+            label = "Green Mold"
+            mold_type = "green"
+        elif mean_B > 135 and brown_h_low <= mean_H <= brown_h_high:
+            label = "Brown Mold"
+            mold_type = "brown"
+        elif mean_S < 35:
+            label = "Dark Mold"
+            mold_type = "dark"
+        else:
+            label = "Mold Spot"
+            mold_type = "generic"
+        
+        # Calculate confidence based on how strongly the colors match
+        # Higher saturation in expected hue range = higher confidence
+        color_strength = min(1.0, mean_S / 100.0) if mean_S > 20 else 0.3
+        darkness_factor = max(0.3, min(1.0, (bg_L - mean_L) / 50.0))
+        area_factor = min(1.0, area / (img_area * 0.001))  # Larger spots = more confident
+        
+        conf = 0.45 + 0.25 * color_strength + 0.15 * darkness_factor + 0.10 * area_factor
+        conf = max(0.45, min(0.92, conf))
+        
+        bbox = BBox(x=x_full, y=y_full, w=bw, h=bh)
+        
+        detections.append(
+            Detection(
+                label=label,
+                category="dirt",
+                confidence=conf,
+                bbox=bbox,
+                legend=f"{label} ({conf*100:.1f}%)",
+            )
+        )
+    
+    dbg(f"detect_mold_by_color: found {len(detections)} mold detections")
+    return detections
+
+
+# ---------------- Texture analysis for mold ----------------
+
+def compute_texture_variance(
+    frame_bgr: np.ndarray,
+    bbox: BBox,
+) -> float:
+    """
+    Computes texture variance within a bounding box region.
+    Mold typically has irregular, speckled texture with higher variance
+    compared to smooth stains or uniform surfaces.
+    
+    Returns a normalized variance score (0-1 range, higher = more textured).
+    """
+    x, y, w, h = bbox.x, bbox.y, bbox.w, bbox.h
+    
+    # Ensure bounds are valid
+    img_h, img_w = frame_bgr.shape[:2]
+    x = max(0, min(x, img_w - 1))
+    y = max(0, min(y, img_h - 1))
+    w = max(1, min(w, img_w - x))
+    h = max(1, min(h, img_h - y))
+    
+    # Extract grayscale patch
+    patch = frame_bgr[y:y+h, x:x+w]
+    if patch.size == 0:
+        return 0.0
+    
+    gray = cv2.cvtColor(patch, cv2.COLOR_BGR2GRAY).astype(np.float32)
+    
+    # Compute local variance using Laplacian (edge detection)
+    laplacian = cv2.Laplacian(gray, cv2.CV_32F)
+    variance = float(np.var(laplacian))
+    
+    # Normalize to 0-1 range (typical values 0-5000)
+    normalized = min(1.0, variance / 2000.0)
+    
+    return normalized
+
+
+def analyze_mold_texture(
+    frame_bgr: np.ndarray,
+    detections: List[Detection],
+) -> List[Detection]:
+    """
+    Analyzes texture of detected regions and boosts confidence
+    for regions with mold-like texture (irregular, speckled).
+    Also helps filter out smooth stains that aren't mold.
+    """
+    enhanced_detections: List[Detection] = []
+    
+    for det in detections:
+        if det.bbox is None:
+            enhanced_detections.append(det)
+            continue
+        
+        # Compute texture variance
+        texture_score = compute_texture_variance(frame_bgr, det.bbox)
+        
+        # Mold typically has texture score > 0.15
+        # Smooth stains have lower texture scores
+        is_textured = texture_score > 0.12
+        
+        # Adjust confidence based on texture
+        new_conf = det.confidence
+        new_label = det.label
+        
+        label_lower = det.label.lower()
+        is_mold_label = "mold" in label_lower or "mögel" in label_lower
+        
+        if is_textured and is_mold_label:
+            # Boost confidence for textured mold
+            new_conf = min(0.95, det.confidence + 0.08)
+        elif not is_textured and is_mold_label:
+            # Slight confidence reduction for smooth "mold"
+            new_conf = max(0.35, det.confidence - 0.05)
+        
+        enhanced_detections.append(
+            Detection(
+                label=new_label,
+                category=det.category,
+                confidence=new_conf,
+                bbox=det.bbox,
+                legend=f"{new_label} ({new_conf*100:.1f}%)",
+                code=det.code,
+                severity=det.severity,
+            )
+        )
+    
+    return enhanced_detections
+
+
+# ---------------- Detection fusion for mold ----------------
+
+def fuse_mold_detections(
+    dark_spot_dets: List[Detection],
+    color_mold_dets: List[Detection],
+    iou_threshold: float = 0.3,
+) -> List[Detection]:
+    """
+    Fuses detections from dark spot analysis and color-based mold detection.
+    
+    When detections from both methods overlap:
+    - Boosts confidence significantly (multi-modal agreement)
+    - Uses "Confirmed Mold" label for high-confidence cases
+    
+    Also merges overlapping detections to avoid duplicates.
+    """
+    if not dark_spot_dets and not color_mold_dets:
+        return []
+    
+    if not color_mold_dets:
+        return dark_spot_dets
+    
+    if not dark_spot_dets:
+        return color_mold_dets
+    
+    def compute_iou(bbox1: BBox, bbox2: BBox) -> float:
+        """Compute Intersection over Union between two bboxes."""
+        x1 = max(bbox1.x, bbox2.x)
+        y1 = max(bbox1.y, bbox2.y)
+        x2 = min(bbox1.x + bbox1.w, bbox2.x + bbox2.w)
+        y2 = min(bbox1.y + bbox1.h, bbox2.y + bbox2.h)
+        
+        if x2 <= x1 or y2 <= y1:
+            return 0.0
+        
+        intersection = (x2 - x1) * (y2 - y1)
+        area1 = bbox1.w * bbox1.h
+        area2 = bbox2.w * bbox2.h
+        union = area1 + area2 - intersection
+        
+        return intersection / union if union > 0 else 0.0
+    
+    fused: List[Detection] = []
+    used_color_indices: set = set()
+    
+    # For each dark spot detection, check for overlapping color detections
+    for dark_det in dark_spot_dets:
+        if dark_det.bbox is None:
+            fused.append(dark_det)
+            continue
+        
+        best_match_idx = -1
+        best_iou = 0.0
+        
+        for idx, color_det in enumerate(color_mold_dets):
+            if idx in used_color_indices or color_det.bbox is None:
+                continue
+            
+            iou = compute_iou(dark_det.bbox, color_det.bbox)
+            if iou > best_iou and iou >= iou_threshold:
+                best_iou = iou
+                best_match_idx = idx
+        
+        if best_match_idx >= 0:
+            # Found overlapping detection - fuse them
+            used_color_indices.add(best_match_idx)
+            color_det = color_mold_dets[best_match_idx]
+            
+            # Boost confidence significantly for multi-modal agreement
+            fused_conf = min(0.96, max(dark_det.confidence, color_det.confidence) + 0.15)
+            
+            # Use stronger label when both methods agree
+            dark_label = dark_det.label.lower()
+            color_label = color_det.label.lower()
+            
+            if "green" in color_label:
+                fused_label = "Confirmed Green Mold"
+            elif "brown" in color_label:
+                fused_label = "Confirmed Brown Mold"
+            elif "dark" in color_label or "heavy" in dark_label:
+                fused_label = "Confirmed Dark Mold"
+            else:
+                fused_label = "Confirmed Mold"
+            
+            # Use the larger bounding box (union)
+            x1 = min(dark_det.bbox.x, color_det.bbox.x)
+            y1 = min(dark_det.bbox.y, color_det.bbox.y)
+            x2 = max(dark_det.bbox.x + dark_det.bbox.w, color_det.bbox.x + color_det.bbox.w)
+            y2 = max(dark_det.bbox.y + dark_det.bbox.h, color_det.bbox.y + color_det.bbox.h)
+            
+            fused_bbox = BBox(x=x1, y=y1, w=x2-x1, h=y2-y1)
+            
+            fused.append(
+                Detection(
+                    label=fused_label,
+                    category="dirt",
+                    confidence=fused_conf,
+                    bbox=fused_bbox,
+                    legend=f"{fused_label} ({fused_conf*100:.1f}%)",
+                )
+            )
+        else:
+            # No overlap - keep original dark spot detection
+            fused.append(dark_det)
+    
+    # Add remaining color detections that didn't overlap
+    for idx, color_det in enumerate(color_mold_dets):
+        if idx not in used_color_indices:
+            fused.append(color_det)
+    
+    dbg(f"fuse_mold_detections: dark={len(dark_spot_dets)}, color={len(color_mold_dets)}, fused={len(fused)}")
+    return fused
+
+
 # ---------------- Defektklassning & risk ----------------
 
 def classify_defect(det: Detection) -> str:
@@ -1096,10 +1542,16 @@ def classify_defect(det: Detection) -> str:
 
     # 2. Check label for dirt-related terms (Swedish + English)
     dirt_terms = [
-        "dark spot", "mold", "mould", "mögel",
-        "smuts", "dirty", "dirt", "stain",
-        "missfärgning", "discoloration", "fläck",
-        "contamination", "smutsig", "oren"
+        "dark spot", "mold", "mould", "mögel", "mildew",
+        "smuts", "dirty", "dirt", "stain", "stains",
+        "missfärgning", "discoloration", "fläck", "fläckar",
+        "contamination", "smutsig", "oren", "unclean",
+        "spot", "spots", "mark", "marks", "marking",
+        "residue", "residues", "debris", "grime",
+        "soot", "grease", "oil", "olja", "fett",
+        "water mark", "watermark", "vattenmärke",
+        "biological", "organic", "growth",
+        "confirmed", "suspected", "heavy", "green mold", "brown mold", "dark mold"
     ]
     if any(word in lbl for word in dirt_terms):
         return "dirt"
@@ -1107,10 +1559,15 @@ def classify_defect(det: Detection) -> str:
     # 3. Check label for damage-related terms (Swedish + English)
     damage_terms = [
         "dent", "buckla", "buckled", "buckling",
-        "hole", "hål", "crack", "spricka",
-        "bent", "deformation", "damage", "skada",
+        "hole", "hål", "crack", "spricka", "cracks",
+        "bent", "deformation", "damage", "skada", "damaged",
         "damagedent", "dent/damage", "rost", "rust",
-        "korrosion", "corrosion"
+        "korrosion", "corrosion", "corroded",
+        "warp", "warped", "deformed", "deformering",
+        "break", "broken", "bruten", "sönder",
+        "tear", "torn", "rip", "rivet", "rivning",
+        "puncture", "puncture", "hålslag",
+        "fracture", "fraktur", "split", "spricka"
     ]
     if any(word in lbl for word in damage_terms):
         return "damage"
@@ -1175,18 +1632,19 @@ def keep_for_output(det: Detection, image_w: int, image_h: int) -> bool:
         return False
 
     # Lower confidence thresholds to catch more real defects
+    # Especially important for container cleaning where we need to catch all contamination
     if defect_type == "damage":
-        min_conf = 0.20  # Very low - damage is critical
-        min_area_ratio = 0.00003
+        min_conf = 0.15  # Very low - damage is critical, catch even weak detections
+        min_area_ratio = 0.00002  # Catch smaller damage too
     elif defect_type == "dirt":
-        min_conf = 0.25
-        min_area_ratio = 0.00004
+        min_conf = 0.20  # Lowered from 0.25 to catch more subtle dirt/contamination
+        min_area_ratio = 0.000015  # Lowered to match dark spot detection threshold
     elif defect_type == "scratch":
-        min_conf = 0.25
-        min_area_ratio = 0.00003
+        min_conf = 0.20  # Lowered to catch more scratches
+        min_area_ratio = 0.00002  # Scratches can be thin, need lower area threshold
     else:  # obstruction
-        min_conf = 0.30
-        min_area_ratio = 0.0001
+        min_conf = 0.25  # Lowered slightly
+        min_area_ratio = 0.00008  # Obstructions should be visible but can be smaller
 
     return is_real_defect(
         det,
@@ -1255,23 +1713,51 @@ def compute_contamination_index(
 ) -> tuple[int, str]:
     """
     Beräknar ett index 1–9 där både smuts/mögel ("dirt") och skador väger in.
-    Mörka/mögelliknande fläckar får något högre vikt än vanlig smuts.
+    Mold detections get higher weight based on severity and confirmation level.
     """
     raw = 0.0
     damage_count = 0
-    dark_spot_like = 0
+    mold_count = 0
+    confirmed_mold_count = 0
 
     for d in dets:
         defect = classify_defect(d)
         label_low = (d.label or "").lower()
 
         if defect == "dirt":
-            # Basvikt för "dirt"
+            # Base weight for dirt
             base = 1.0
-            # Mörka/mögelliknande fläckar väger lite tyngre
-            if any(w in label_low for w in ["dark spot", "mold", "mould", "mögel"]):
-                base += 0.5
-                dark_spot_like += 1
+            
+            # Confirmed mold gets highest weight
+            if "confirmed" in label_low and "mold" in label_low:
+                base = 2.5
+                confirmed_mold_count += 1
+                mold_count += 1
+            # Heavy/severe mold
+            elif "heavy" in label_low and "mold" in label_low:
+                base = 2.0
+                mold_count += 1
+            # Green mold (often most concerning)
+            elif "green" in label_low and "mold" in label_low:
+                base = 2.0
+                mold_count += 1
+            # Dark/black mold
+            elif "dark" in label_low and "mold" in label_low:
+                base = 1.8
+                mold_count += 1
+            # Regular mold detection
+            elif any(w in label_low for w in ["mold", "mould", "mögel", "mildew"]):
+                base = 1.5
+                mold_count += 1
+            # Suspected mold
+            elif "suspected" in label_low:
+                base = 1.2
+                mold_count += 1
+            # Dark spots (likely mold)
+            elif "dark spot" in label_low:
+                base = 1.3
+                mold_count += 1
+                
             raw += base
         elif defect == "damage":
             raw += 2.0
@@ -1280,11 +1766,15 @@ def compute_contamination_index(
     if damage_count > 1:
         raw += (damage_count - 1) * 1.0
 
-    # Extra litet påslag om flera mörka fläckar hittats
-    if dark_spot_like > 1:
-        raw += 0.5
+    # Extra weight for multiple mold detections (indicates widespread contamination)
+    if mold_count > 2:
+        raw += (mold_count - 2) * 0.5
+    
+    # Significant boost for any confirmed mold
+    if confirmed_mold_count > 0:
+        raw += 1.5
 
-    # Riskscore ger en mjuk extra höjning
+    # Risk score adds a soft additional boost
     raw += risk_score / 4.0
 
     idx = int(round(raw)) + 1
@@ -2205,19 +2695,52 @@ def analyze_frame_bytes(
     yolo_raw_count = len(det_objects)
     dbg(f"analyze_frame_bytes: YOLO detections (raw)={yolo_raw_count}")
 
-    # Dark-spot-detektering (strikt)
-    dark_spot_count = 0
+    # === MOLD DETECTION PIPELINE ===
+    # Multi-modal mold detection: dark spots + color analysis + texture + fusion
+    
+    dark_spot_dets: List[Detection] = []
+    color_mold_dets: List[Detection] = []
+    
+    # 1. Dark-spot detection (darkness-based)
     try:
         dark_spot_dets = detect_dark_spots(frame_full, spot_mode=spot_mode)
-        if dark_spot_dets:
-            detections.extend(dark_spot_dets)
-            dark_spot_count = len(dark_spot_dets)
-        dbg(
-            f"analyze_frame_bytes: dark-spot detections={dark_spot_count}, "
-            f"total_detections_after_dark_spots={len(detections)}"
-        )
+        dbg(f"analyze_frame_bytes: dark-spot detections={len(dark_spot_dets)}")
     except Exception as e:
         print(f"detect_dark_spots error: {e}")
+    
+    # 2. Color-based mold detection (HSV/LAB analysis)
+    try:
+        color_mold_dets = detect_mold_by_color(frame_full)
+        dbg(f"analyze_frame_bytes: color-mold detections={len(color_mold_dets)}")
+    except Exception as e:
+        print(f"detect_mold_by_color error: {e}")
+    
+    # 3. Fuse dark spot and color-based detections
+    fused_mold_dets: List[Detection] = []
+    try:
+        fused_mold_dets = fuse_mold_detections(dark_spot_dets, color_mold_dets)
+        dbg(f"analyze_frame_bytes: fused mold detections={len(fused_mold_dets)}")
+    except Exception as e:
+        print(f"fuse_mold_detections error: {e}")
+        # Fallback: use individual detections without fusion
+        fused_mold_dets = dark_spot_dets + color_mold_dets
+    
+    # 4. Apply texture analysis to boost/filter mold detections
+    try:
+        fused_mold_dets = analyze_mold_texture(frame_full, fused_mold_dets)
+        dbg(f"analyze_frame_bytes: after texture analysis={len(fused_mold_dets)}")
+    except Exception as e:
+        print(f"analyze_mold_texture error: {e}")
+    
+    # Add fused mold detections to main detection list
+    if fused_mold_dets:
+        detections.extend(fused_mold_dets)
+    
+    dbg(
+        f"analyze_frame_bytes: mold pipeline complete - "
+        f"dark_spots={len(dark_spot_dets)}, color={len(color_mold_dets)}, "
+        f"fused={len(fused_mold_dets)}, total_detections={len(detections)}"
+    )
 
     # Visual memory refinement - runs AFTER dark spots are added
     # so visual memory can filter out both YOLO detections AND dark spots
@@ -2400,7 +2923,9 @@ def analyze_frame_bytes(
         },
         "counts": {
             "yolo_raw": yolo_raw_count,
-            "dark_spots": dark_spot_count,
+            "dark_spots": len(dark_spot_dets),
+            "color_mold": len(color_mold_dets),
+            "fused_mold": len(fused_mold_dets),
             "all_detections_after_filters": len(all_detections),
             "anomaly_detections": len(anomaly_detections),
         },

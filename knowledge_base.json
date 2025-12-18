@@ -18,12 +18,77 @@
     "Mold": {
       "display_name": "Mold",
       "category": "dirt",
-      "risk_weight": 3
+      "risk_weight": 4
     },
     "Mögel": {
       "display_name": "Mögel",
       "category": "dirt",
+      "risk_weight": 4
+    },
+    "Green Mold": {
+      "display_name": "Green Mold",
+      "category": "dirt",
+      "risk_weight": 5
+    },
+    "Brown Mold": {
+      "display_name": "Brown Mold",
+      "category": "dirt",
+      "risk_weight": 4
+    },
+    "Dark Mold": {
+      "display_name": "Dark Mold",
+      "category": "dirt",
+      "risk_weight": 5
+    },
+    "Heavy Mold": {
+      "display_name": "Heavy Mold",
+      "category": "dirt",
+      "risk_weight": 6
+    },
+    "Confirmed Mold": {
+      "display_name": "Confirmed Mold",
+      "category": "dirt",
+      "risk_weight": 5
+    },
+    "Confirmed Green Mold": {
+      "display_name": "Confirmed Green Mold",
+      "category": "dirt",
+      "risk_weight": 6
+    },
+    "Confirmed Brown Mold": {
+      "display_name": "Confirmed Brown Mold",
+      "category": "dirt",
+      "risk_weight": 5
+    },
+    "Confirmed Dark Mold": {
+      "display_name": "Confirmed Dark Mold",
+      "category": "dirt",
+      "risk_weight": 6
+    },
+    "Suspected Mold": {
+      "display_name": "Suspected Mold",
+      "category": "dirt",
       "risk_weight": 3
+    },
+    "Mold Spot": {
+      "display_name": "Mold Spot",
+      "category": "dirt",
+      "risk_weight": 4
+    },
+    "Mold/Contamination Spot": {
+      "display_name": "Mold/Contamination Spot",
+      "category": "dirt",
+      "risk_weight": 4
+    },
+    "Mold/Mildew Spot": {
+      "display_name": "Mold/Mildew Spot",
+      "category": "dirt",
+      "risk_weight": 3
+    },
+    "Large Mold Area": {
+      "display_name": "Large Mold Area",
+      "category": "dirt",
+      "risk_weight": 6
     },
     "Missfärgning": {
       "display_name": "Missfärgning",
@@ -247,6 +312,20 @@
       "required_categories": ["dirt"],
       "min_count": 3,
       "risk_delta": 2
+    },
+    {
+      "id": "confirmed_mold_presence",
+      "description": "Confirmed mold detection requires immediate attention",
+      "required_labels": ["Confirmed Mold", "Confirmed Green Mold", "Confirmed Brown Mold", "Confirmed Dark Mold"],
+      "min_count": 1,
+      "risk_delta": 4
+    },
+    {
+      "id": "multiple_mold_spots",
+      "description": "Multiple mold detections indicate severe contamination",
+      "required_labels": ["Mold", "Green Mold", "Brown Mold", "Dark Mold", "Heavy Mold", "Mold Spot", "Large Mold Area"],
+      "min_count": 3,
+      "risk_delta": 3
     }
   ]
 }
